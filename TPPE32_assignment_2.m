@@ -156,12 +156,12 @@ datetick('x','YYYY-mm')
 %XT=length(find(avg_ret(502:end)<-VaR_ewma95));
 %m_=norminv(0.975,length(VaR_ewma95)*0.05,sqrt(length(VaR_ewma95)*0.05*0.95));
 % EWMA
-[ XT,m_ ] = testHypNor(0.01, 0.95, 2, 502, avg_ret, VaR_ewma95);
+[ XT,m_ ] = testHypNor(0.05, 0.95, 2, 502, avg_ret, VaR_ewma95);
 [ XT,m_ ] = testHypNor(0.01, 0.99, 2, 502, avg_ret, VaR_ewma99);
 % Historical Simulation
 [ XT,m_ ] = testHypNor(0.01, 0.95, 2, 501, avg_ret, VaR95_his);
 [ XT,m_ ] = testHypNor(0.01, 0.99, 2, 501, avg_ret, VaR99_his);
 % Historical Simulation
-[ XT,m_ ] = testHypNor(0.01, 0.95, 2, 502, avg_ret, VaR95_hisStd);
-[ XT,m_ ] = testHypNor(0.01, 0.99, 2, 502, avg_ret, VaR99_hisStd);
+[ XT,m_ ] = testHypNor(0.01, 0.95, 2, 501, avg_retStd, VaR95_hisStd);
+[ XT,m_ ] = testHypNor(0.01, 0.99, 2, 501, avg_retStd, VaR99_hisStd);
 
