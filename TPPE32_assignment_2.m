@@ -29,7 +29,7 @@ for i=1:length(performance)
 end
 
 semilogy(dates, perf);
-datetick('x','YYYY-MM')
+datetick('x','YYYY-mm')
 
 %% Task 1
 
@@ -40,7 +40,7 @@ w  = w*ones(15,1);
 
 vol = ones(1,15);
 for i=1:15
-    vol(1,i) = sqrt(sum((Vp_R(1:end,i)-mean(Vp_R(1:end,i))).^2)/length(Vp_R));
+    vol(1,i) = sqrt(sum((Vp_R(1:end,i)-mean(Vp_R(1:end,i))).^2)/(length(Vp_R)-1));
 end
 
 rho = zeros(15,15);
@@ -83,10 +83,11 @@ EWMA = EWMA_serie(lambda,avg_ret)';
 VaR_ewma95 = norminv(0.95) * sqrt(EWMA(501:end));
 VaR_ewma99 = norminv(0.99) * sqrt(EWMA(501:end));
 
+figure()
 plot(dates(503:end), VaR_ewma95);
 hold on
 plot(dates(503:end), VaR_ewma99);
-datetick('x','YYYY-MM');
+datetick('x','YYYY-mm');
 
 % 1c
 % Historical Simulation | Expected Shortfall
@@ -101,23 +102,30 @@ bar(sorted_VpLoss)
 VaR95_his = zeros(length(avg_ret)-500,1);
 VaR99_his = VaR95_his;
 for i=1:length(VaR95_his)
-    tempSort = sort(avg_ret(i:i+499)*10*(-1),'descend');
-    VaR95_his(i)=tempSort(25);
-    VaR99_his(i)=tempSort(5);
+    VaR95_his(i) = -quantile(avg_ret(i:i+499)*10*(1),0.05);
+    VaR99_his(i) = -quantile(avg_ret(i:i+499)*10*(1),0.01);
 end
 
 figure()
 subplot(2,1,1)
-plot(VaR95_his);
+plot(dates(502:end), VaR95_his);
+datetick('x','YYYY-mm')
 hold on
 subplot(2,1,2)
-plot(VaR99_his)
-
-
+plot(dates(502:end), VaR99_his)
+datetick('x','YYYY-mm')
 
 % ES
 E_fall95 = mean(sorted_VpLoss(1:floor((length(Vp_R)*0.05))));
 E_fall99 = mean(sorted_VpLoss(1:floor((length(Vp_R)*0.01))));
+
+% 1d
+sigma_t = sqrt(sum((avg_ret(1:end)-mean(avg_ret(1:end))).^2)/(length(avg_ret)-1));
+for i=1:length(avg_ret)-1
+    avg_retStd=avg_ret(2:end)*(sigma_t/sqrt(EWMA(i)));
+end
+figure();
+hist(avg_retStd,100);
 
 
 
