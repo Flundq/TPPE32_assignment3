@@ -15,11 +15,11 @@ for i=1:15
     Vp_R(1:1439,i) = Vp(2:end,i)./Vp(1:end-1,i)-1;
 end
 
-performance = [100/15 * ones(1,15)];
+performance = [10/15 * ones(1,15)];
 
 for i=1:length(Vp_R)
     
-   performance = [performance ; performance(i)*(Vp_R(i,1:15)+1)]; 
+   performance = [performance ; performance(i,:).*(Vp_R(i,1:15)+1)]; 
     
 end
 
