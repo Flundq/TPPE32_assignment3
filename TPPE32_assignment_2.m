@@ -68,21 +68,23 @@ VaR_975 = sigma_ret * norminv(0.975);
 % EWMA
 avg_ret = mean(Vp_R,2);
 
-x0=[0.94];
-A=[1];
-b=[1];
-Aeq=[0];
-beq=[0];
-lb=0;
-ub=1;
+% x0=[0.94];
+% A=[1];
+% b=[1];
+% Aeq=[0];
+% beq=[0];
+% lb=0;
+% ub=1;
+% 
+% fun=@(x0)-sum((-log(EWMA_serie(x0, avg_ret)')-avg_ret(2:end).^2./EWMA_serie(x0, avg_ret)'));
+% [lambda, fval] = fmincon(fun,x0,A,b,Aeq,beq,lb,ub);
 
-fun=@(x0)-sum((-log(EWMA_serie(x0, avg_ret)')-avg_ret(2:end).^2./EWMA_serie(x0, avg_ret)'));
-[lambda, fval] = fmincon(fun,x0,A,b,Aeq,beq,lb,ub);
+lambda=0.94;
 
 EWMA = EWMA_serie(lambda,avg_ret)';
 
-VaR_ewma95 = 10*norminv(0.95) * sqrt(EWMA(501:end));
-VaR_ewma99 = 10*norminv(0.99) * sqrt(EWMA(501:end));
+VaR_ewma95 = norminv(0.95) * sqrt(EWMA(501:end));
+VaR_ewma99 = norminv(0.99) * sqrt(EWMA(501:end));
 
 figure()
 plot(dates(503:end), VaR_ewma95);
@@ -105,8 +107,8 @@ bar(sorted_VpLoss)
 VaR95_his = zeros(length(avg_ret)-500,1);
 VaR99_his = VaR95_his;
 for i=1:length(VaR95_his)
-    VaR95_his(i) = -quantile(avg_ret(i:i+499)*10,0.05);
-    VaR99_his(i) = -quantile(avg_ret(i:i+499)*10,0.01);
+    VaR95_his(i) = -quantile(avg_ret(i:i+499),0.05);
+    VaR99_his(i) = -quantile(avg_ret(i:i+499),0.01);
 end
 
 figure()
@@ -136,8 +138,8 @@ hist(avg_retStd,100);
 VaR95_hisStd = zeros(length(avg_retStd)-500,1);
 VaR99_hisStd = VaR95_hisStd;
 for i=1:length(VaR95_hisStd)
-    VaR95_hisStd(i) = -quantile(avg_retStd(i:i+499)*10,0.05);
-    VaR99_hisStd(i) = -quantile(avg_retStd(i:i+499)*10,0.01);
+    VaR95_hisStd(i) = -quantile(avg_retStd(i:i+499),0.05);
+    VaR99_hisStd(i) = -quantile(avg_retStd(i:i+499),0.01);
 end
 
 figure()
@@ -152,16 +154,26 @@ title('His. Sim. VaR 99% STD return');
 datetick('x','YYYY-mm')
 
 % 1e
-% FOR 1B
-%XT=length(find(avg_ret(502:end)<-VaR_ewma95));
-%m_=norminv(0.975,length(VaR_ewma95)*0.05,sqrt(length(VaR_ewma95)*0.05*0.95));
 % EWMA
-[ XT,m_ ] = testHypNor(0.05, 0.95, 2, 502, avg_ret, VaR_ewma95);
-[ XT,m_ ] = testHypNor(0.01, 0.99, 2, 502, avg_ret, VaR_ewma99);
+[ XT1,m_1 ] = testHypNor(0.05, 0.95, 2, avg_ret(502:end), VaR_ewma95);
+[ XT2,m_2 ] = testHypNor(0.05, 0.99, 2, avg_ret(502:end), VaR_ewma99);
 % Historical Simulation
-[ XT,m_ ] = testHypNor(0.01, 0.95, 2, 501, avg_ret, VaR95_his);
-[ XT,m_ ] = testHypNor(0.01, 0.99, 2, 501, avg_ret, VaR99_his);
+[ XT3,m_3 ] = testHypNor(0.05, 0.95, 2, avg_ret(501:end), VaR95_his);
+[ XT4,m_4 ] = testHypNor(0.05, 0.99, 2, avg_ret(501:end), VaR99_his);
 % Historical Simulation
-[ XT,m_ ] = testHypNor(0.01, 0.95, 2, 501, avg_retStd, VaR95_hisStd);
-[ XT,m_ ] = testHypNor(0.01, 0.99, 2, 501, avg_retStd, VaR99_hisStd);
+[ XT5,m_5 ] = testHypNor(0.05, 0.95, 2, avg_retStd(501:end), VaR95_hisStd);
+[ XT6,m_6 ] = testHypNor(0.05, 0.99, 2, avg_retStd(501:end), VaR99_hisStd);
+output.struct.hTest=[XT1 XT2 XT3 XT4 XT5 XT6]-[m_1 m_2 m_3 m_4 m_5 m_6];
+
+% 1f
+% TEST VaR_ewma95
+
+
+[ testStatistic, Fscore ] = calcTransN( avg_ret(500:end), VaR_ewma95, 0.05)
+
+
+
+
+
+
 
