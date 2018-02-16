@@ -160,16 +160,41 @@ datetick('x','YYYY-mm')
 % Historical Simulation
 [ XT3,m_3 ] = testHypNor(0.05, 0.95, 2, avg_ret(501:end), VaR95_his);
 [ XT4,m_4 ] = testHypNor(0.05, 0.99, 2, avg_ret(501:end), VaR99_his);
-% Historical Simulation
+% Historical Simulation STD
 [ XT5,m_5 ] = testHypNor(0.05, 0.95, 2, avg_retStd(501:end), VaR95_hisStd);
 [ XT6,m_6 ] = testHypNor(0.05, 0.99, 2, avg_retStd(501:end), VaR99_hisStd);
-output.struct.hTest=[XT1 XT2 XT3 XT4 XT5 XT6]-[m_1 m_2 m_3 m_4 m_5 m_6];
+output.struct.hTest=[m_1 m_2 m_3 m_4 m_5 m_6]-[XT1 XT2 XT3 XT4 XT5 XT6];
 
 % 1f
-% TEST VaR_ewma95
+% TEST EWMA
+[ TS1, FS1 ] = calcTransN( avg_ret(500:end), VaR_ewma95, 0.05)
+[ TS2 ] = calcTransN( avg_ret(500:end), VaR_ewma99, 0.05)
+% Historical Simulation
+[ TS3 ] = calcTransN( avg_ret(500:end), VaR95_his, 0.05)
+[ TS4 ] = calcTransN( avg_ret(500:end), VaR99_his, 0.05)
+% Historical Simulation STD
+[ TS5] = calcTransN( avg_retStd(500:end), VaR95_hisStd, 0.05)
+[ TS6] = calcTransN( avg_retStd(500:end), VaR99_hisStd, 0.05)
+output.struct.chris=FS1*ones(1,6)-[TS1 TS2 TS3 TS4 TS5 TS6];
+
+figure()
+scatter(dates(1+501:end), avg_ret(501:end),'.')
+hold on
+plot(dates(2+501:end), -VaR_ewma95)
 
 
-[ testStatistic, Fscore ] = calcTransN( avg_ret(500:end), VaR_ewma95, 0.05)
+%% Task 2
+clear
+close all
+clc
+[Bn, TXT_Bn, RAW_Bn] = xlsread('timeSeries2018.xlsx', 'Problem 2');
+cfDates=datenum(cell2mat(Raw_Bn(4:8,32)));
+vertices=[1 3 6 12 24 36 48 60 84 108 120 180 240 360];  
+mTillExp = ceil((cfDates(end)-datenum(date()))/30);
+vertNeed=(length(find(vertNeed>vertices))+1);
+
+
+
 
 
 
