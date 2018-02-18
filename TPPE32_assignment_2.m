@@ -183,22 +183,33 @@ hold on
 plot(dates(2+501:end), -VaR_ewma95)
 
 
-%% Task 2
-clear
-close all
-clc
-[Bn, TXT_Bn, RAW_Bn] = xlsread('timeSeries2018.xlsx', 'Problem 2');
-cfDates=datenum(cell2mat(Raw_Bn(4:8,32)));
-vertices=[1 3 6 12 24 36 48 60 84 108 120 180 240 360];  
-mTillExp = ceil((cfDates(end)-datenum(date()))/30);
-vertNeed=(length(find(vertNeed>vertices))+1);
+%% Task 2 in EXCEL
+% clear
+% close all
+% clc
+% [Bn, TXT_Bn, RAW_Bn] = xlsread('timeSeries2018.xlsx', 'Problem 2');
+% cfDates=[datenum(cell2mat(RAW_Bn(4:8,32))), datenum(cell2mat(RAW_Bn(4:8,33)))] ;
+% vertices=[1 3 6 12 24 36 48 60 84 108 120 180 240 360];  
+% mTillExp = ceil((cfDates(end,1)-datenum(date()))/30);
+% vertNeed=(length(find(mTillExp>vertices))+1);
+
+%% Task 3
+[Op, TXT_Op, RAW_Op] = xlsread('timeSeries2018.xlsx', 'Problem 3');
+dates=datenum(cell2mat(RAW_Op(3:3687,1)));
+SPX=cell2mat(RAW_Op(3:3687,2));
+VIX=cell2mat(RAW_Op(3:3687,3))/100;
+RF3m=cell2mat(RAW_Op(3:3687,4))/100;
+K_C16m = 2765;
+expiry = datenum('2018-03-16');
+
+C16m_d1 = (log(SPX/K_C16m)+(RF3m+VIX.^2/2)'*((expiry-dates)/365))/(VIX'*sqrt(((expiry-dates)/365)));
+C16m_d2 = C16m_d1-VIX'*sqrt(((expiry-dates)/365));
+
+delta_C16m = normcdf(C16m_d1);
+%gamma_C16m = normcdf(C16m_d1)/((SPX'*VIX)'*sqrt(((expiry-dates)/365)));
+vega_C16m = SPX'*(((expiry-dates)/365))*delta_C16m;
+rho_C16m = (K_C16m*((expiry-dates)/365)*exp(-RF3m.*((expiry-dates)/365))')*normcdf(C16m_d2);
 
 
-
-
-
-
-
-
-
+ 
 
