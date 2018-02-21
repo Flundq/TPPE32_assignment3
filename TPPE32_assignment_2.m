@@ -203,13 +203,30 @@ K_C16m = 2765;
 expiry = datenum('2018-03-16');
 
 C16m_d1 = (log(SPX/K_C16m)+(RF3m+VIX.^2/2)'*((expiry-dates)/365))/(VIX'*sqrt(((expiry-dates)/365)));
-C16m_d2 = C16m_d1-VIX'*sqrt(((expiry-dates)/365));
+C16m_d2 = C16m_d1-VIX.*sqrt(((expiry-dates)/365));
 
 delta_C16m = normcdf(C16m_d1);
 %gamma_C16m = normcdf(C16m_d1)/((SPX'*VIX)'*sqrt(((expiry-dates)/365)));
-vega_C16m = SPX'*(((expiry-dates)/365))*delta_C16m;
-rho_C16m = (K_C16m*((expiry-dates)/365)*exp(-RF3m.*((expiry-dates)/365))')*normcdf(C16m_d2);
 
+vega_C16m=[];
+for i=1:length(delta_C16m)
+    vega_C16m(i) = SPX(i)*(((expiry-dates(i))/365))*delta_C16m(i);
+end
+vega_C16m=vega_C16m';
+
+rho_C16m=[];
+for i=1:length(C16m_d2)
+    a = K_C16m*((expiry-dates(i))/365);
+    b =(exp(-RF3m(i)*((expiry-dates(i))/365)));
+    c =normcdf(C16m_d2(i));
+    rho_C16m(i)=a*b*c; 
+end
+rho_C16m=rho_C16m';
+
+value_cng=[];
+for i=1:length(delta_C16m')-1
+    value_cng(i) = delta_C16m(i)*(SPX(i)-SPX(i+1))+vega_C16m(i)*(VIX(i)-VIX(i+1))+rho_C16m(i)*(RF3m(i)-RF3m(i+1));
+end
 
  
 
