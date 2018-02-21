@@ -233,9 +233,9 @@ for i=1:length(delta_C16m')-1
 end
 
     a = K_C16m*((expiry-dates)/365);
-    b =(exp(-RF3m.*((expiry-dates)/365)));
-    c =normcdf(C16m_d2);
-    rho_C16m_ps=a.*b.*c; 
+    b =(exp(-RF3m(i)*((expiry-dates(i))/365)));
+    c =normcdf(C16m_d2(i));
+    rho_C16m(i)=a*b*c; 
 
  
 
