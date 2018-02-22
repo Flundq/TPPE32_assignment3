@@ -6,7 +6,12 @@ clc
 %% Get Data
 
 [Vp, TXT_Vp, RAW_Vp] = xlsread('timeSeries2018.xlsx', 'Problem 1 and 4');
-dates = datenum(cell2mat(TXT_Vp(3:1442,1)));
+dates = datenum(cell2mat(RAW_Vp(3:1442,1)));
+
+if ismac
+   dates=dates+693960;
+   'It is a MAC'
+end
 
 %% Get Portfolio
 Vp_C = 10;
@@ -155,15 +160,16 @@ datetick('x','YYYY-mm')
 
 % 1e
 % EWMA
-[ XT1,m_1,Z_1,N_1 ] = testHypNor(0.05, 0.95, 2, avg_ret(502:end), VaR_ewma95);
-[ XT2,m_2,Z_1,N_2 ] = testHypNor(0.05, 0.99, 2, avg_ret(502:end), VaR_ewma99);
+[ XT1,m_1o,m_1u,Z_1,N_1 ] = testHypNor(0.05, 0.95, 2, avg_ret(502:end), VaR_ewma95);
+[ XT2,m_2o,m_2u,Z_2 ] = testHypNor(0.05, 0.99, 2, avg_ret(502:end), VaR_ewma99);
 % Historical Simulation
-[ XT3,m_3,Z_3,N_3 ] = testHypNor(0.05, 0.95, 2, avg_ret(501:end), VaR95_his);
-[ XT4,m_4,Z_4,N_4 ] = testHypNor(0.05, 0.99, 2, avg_ret(501:end), VaR99_his);
+[ XT3,m_3o,m_3u,Z_3 ] = testHypNor(0.05, 0.95, 2, avg_ret(501:end), VaR95_his);
+[ XT4,m_4o,m_4u,Z_4 ] = testHypNor(0.05, 0.99, 2, avg_ret(501:end), VaR99_his);
 % Historical Simulation STD
-[ XT5,m_5,Z_5,N_5 ] = testHypNor(0.05, 0.95, 2, avg_retStd(501:end), VaR95_hisStd);
-[ XT6,m_6,Z_6,N_6 ] = testHypNor(0.05, 0.99, 2, avg_retStd(501:end), VaR99_hisStd);
-output.struct.hTest=[m_1 m_2 m_3 m_4 m_5 m_6]-[XT1 XT2 XT3 XT4 XT5 XT6];
+[ XT5,m_5o,m_5u,Z_5 ] = testHypNor(0.05, 0.95, 2, avg_retStd(501:end), VaR95_hisStd);
+[ XT6,m_6o,m_6u,Z_6 ] = testHypNor(0.05, 0.99, 2, avg_retStd(501:end), VaR99_hisStd);
+output.struct.mo=[m_1o m_2o m_3o m_4o m_5o m_6o];
+output.struct.mu=[m_1u m_2u m_3u m_4u m_5u m_6u];
 
 % 1f
 % TEST EWMA
@@ -178,9 +184,9 @@ output.struct.hTest=[m_1 m_2 m_3 m_4 m_5 m_6]-[XT1 XT2 XT3 XT4 XT5 XT6];
 output.struct.chris=FS1*ones(1,6)-[TS1 TS2 TS3 TS4 TS5 TS6];
 
 figure()
-scatter(dates(1+501:end), avg_ret(501:end),'.')
+scatter(dates(502:end), avg_ret(501:end),'*')
 hold on
-plot(dates(2+501:end), -VaR_ewma95)
+plot(dates(502:end), -VaR99_his)
 
 
 %% Task 2 in EXCEL
@@ -209,12 +215,16 @@ iv_C16m = Op(1,7)/100;
 iv_C20a = Op(3,7)/100;
 iv_P16m = Op(2,7)/100;
 
-expiry_C16m = datenum(TXT_Op(7,7));
-expiry_P16m = datenum(TXT_Op(8,7)');
-expiry_C20a = datenum(TXT_Op(9,7));
+expiry_C16m = datenum(cell2mat(RAW_Op(7,7)));
+expiry_P16m = datenum(cell2mat(RAW_Op(8,7)));
+expiry_C20a = datenum(cell2mat(RAW_Op(9,7)));
 
 if ismac
    dates=dates+693960;
+   expiry_C16m = expiry_C16m+693960;
+   expiry_P16m =expiry_P16m+693960;
+   expiry_C20a = expiry_C20a+693960;
+   
    'It is a MAC'
 end
 
@@ -272,6 +282,8 @@ VaR_procent=VaR/V;
 
 asset_contr = (norminv(0.99)*sqrt(1)*G*C*G'*h)/sqrt((V^2*sigma_sq));
 fact_contr = (norminv(0.99)*C*G'*h)/sqrt((V^2*sigma_sq));
+
+sum(asset_contr)/V;
 
 % FRÅGA PONTUS! 
 
