@@ -199,43 +199,78 @@ dates=datenum(cell2mat(RAW_Op(3:3687,1)));
 SPX=cell2mat(RAW_Op(3:3687,2));
 VIX=cell2mat(RAW_Op(3:3687,3))/100;
 RF3m=cell2mat(RAW_Op(3:3687,4))/100;
+RF3m = log(1+RF3m*0.25)/(0.25);
+
 K_C16m = 2765;
-expiry = datenum('2018-03-16');
+K_C20a = 2765;
+K_P16m = 2775;
+
+iv_C16m = Op(1,7)/100;
+iv_C20a = Op(3,7)/100;
+iv_P16m = Op(2,7)/100;
+
+expiry_C16m = datenum(TXT_Op(7,7));
+expiry_P16m = datenum(TXT_Op(8,7)');
+expiry_C20a = datenum(TXT_Op(9,7));
 
 if ismac
    dates=dates+693960;
+   'It is a MAC'
 end
 
-C16m_d1 = (log(SPX/K_C16m)+(RF3m+VIX.^2/2).*((expiry-dates)/365))./(VIX.*sqrt(((expiry-dates)/365)));
-C16m_d2 = C16m_d1-VIX.*sqrt(((expiry-dates)/365));
+C16m_d1 = (log(SPX(1)/K_C16m)+(RF3m(1)+(iv_C16m^2)/2)*((expiry_C16m-dates(1))/365))/(iv_C16m*sqrt(((expiry_C16m-dates(1))/365)));
+C16m_d2 = C16m_d1-iv_C16m*sqrt(((expiry_C16m-dates(1))/365));
+
+C20a_d1 = (log(SPX(1)/K_C20a)+(RF3m(1)+(iv_C20a^2)/2)*((expiry_C20a-dates(1))/365))/(iv_C20a*sqrt(((expiry_C20a-dates(1))/365)));
+C20a_d2 = C20a_d1-iv_C20a*sqrt(((expiry_C20a-dates(1))/365));
+
+P16m_d1 = (log(SPX(1)/K_P16m)+(RF3m(1)+(iv_P16m^2)/2)*((expiry_P16m-dates(1))/365))/(iv_P16m*sqrt(((expiry_P16m-dates(1))/365)));
+P16m_d2 = P16m_d1-iv_P16m*sqrt(((expiry_P16m-dates(1))/365));
 
 delta_C16m = normcdf(C16m_d1);
-%gamma_C16m = normcdf(C16m_d1)/((SPX'*VIX)'*sqrt(((expiry-dates)/365)));
+delta_C20a = normcdf(C20a_d1);
+delta_P16m = normcdf(P16m_d1)-1;
 
-vega_C16m=[];
-for i=1:length(delta_C16m)
-    vega_C16m(i) = SPX(i)*(((expiry-dates(i))/365))*delta_C16m(i);
-end
-vega_C16m=vega_C16m';
+vega_C16m = SPX(1)*sqrt(((expiry_C16m-dates(1))/365))*((1/sqrt(2*pi))*exp(-C16m_d1^2/2));
+vega_C20a = SPX(1)*sqrt(((expiry_C20a-dates(1))/365))*((1/sqrt(2*pi))*exp(-C20a_d1^2/2));
+vega_P16m = SPX(1)*sqrt(((expiry_P16m-dates(1))/365))*((1/sqrt(2*pi))*exp(-P16m_d1^2/2));
 
-rho_C16m=[];
-for i=1:length(C16m_d2)
-    a = K_C16m*((expiry-dates(i))/365);
-    b =(exp(-RF3m(i)*((expiry-dates(i))/365)));
-    c =normcdf(C16m_d2(i));
-    rho_C16m(i)=a*b*c; 
-end
-rho_C16m=rho_C16m';
+rho_C16m=K_C16m*((expiry_C16m-dates(1))/365)*(exp(-RF3m(1)*((expiry_C16m-dates(1))/365)))*normcdf(C16m_d2); 
+rho_C20a=K_C20a*((expiry_C20a-dates(1))/365)*(exp(-RF3m(1)*((expiry_C20a-dates(1))/365)))*normcdf(C20a_d2); 
+rho_P16m=-K_P16m*((expiry_P16m-dates(1))/365)*(exp(-RF3m(1)*((expiry_P16m-dates(1))/365)))*normcdf(-P16m_d2); 
 
-value_cng=[];
-for i=1:length(delta_C16m')-1
-    value_cng(i) = delta_C16m(i)*(SPX(i)-SPX(i+1))+vega_C16m(i)*(VIX(i)-VIX(i+1))+rho_C16m(i)*(RF3m(i)-RF3m(i+1));
-end
+G=[delta_C16m vega_C16m rho_C16m ; delta_C20a vega_C20a rho_C20a ; delta_P16m vega_P16m rho_P16m];
 
-    a = K_C16m*((expiry-dates)/365);
-    b =(exp(-RF3m.*((expiry-dates)/365)));
-    c =normcdf(C16m_d2);
-    rho_C16m_ps=a.*b.*c; 
+% for i=1:length(delta_C16m')-1
+%     value_cng(i) = delta_C16m(i)*(SPX(i)-SPX(i+1))+vega_C16m(i)*(VIX(i)-VIX(i+1))+rho_C16m(i)*(RF3m(i)-RF3m(i+1));
+% end
+
+Price_C16m = SPX(1)*normcdf(C16m_d1)-K_C16m*exp(-RF3m(1)*((expiry_C16m-dates(1))/365))*normcdf(C16m_d2);
+Price_C20a = SPX(1)*normcdf(C20a_d1)-K_C20a*exp(-RF3m(1)*((expiry_C20a-dates(1))/365))*normcdf(C20a_d2);
+Price_P16m = K_P16m*exp(-RF3m(1)*((expiry_P16m-dates(1))/365))*normcdf(-P16m_d2)-SPX(1)*normcdf(-P16m_d1);
+
+Price_P16m_v2 = Price_C16m + K_P16m*exp(-RF3m(1)*((expiry_C16m-dates(1))/365))-SPX(1);
+
+h=[10^4; 2*10^4 ; 10^4];
+
+SPX_voll  = sqrt(sum((SPX-mean(SPX)).^2)/(length(SPX)-1));
+VIX_voll  = sqrt(sum((VIX-mean(VIX)).^2)/(length(VIX)-1));
+RF3m_voll = sqrt(sum((RF3m-mean(RF3m)).^2)/(length(RF3m)-1));
+
+C= [SPX_voll^2 SPX_voll*VIX_voll*corr(SPX,VIX) SPX_voll*RF3m_voll*corr(SPX,RF3m)];
+C =[C ; C(1,2) VIX_voll^2 VIX_voll*RF3m_voll*corr(VIX,RF3m)];
+C =[C ; C(1,3) C(2,3) RF3m_voll^2];
+
+V = [Price_C16m Price_C20a Price_P16m]*h; % Portfolio Value
+
+sigma_sq = (1/V^2)*h'*G'*C*G*h; % volla på årsbasis?
+
+VaR = V * norminv(0.99)*sqrt(sigma_sq)*sqrt(1/365);
+
+
+
+
+
 
  
 
