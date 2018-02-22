@@ -155,14 +155,14 @@ datetick('x','YYYY-mm')
 
 % 1e
 % EWMA
-[ XT1,m_1 ] = testHypNor(0.05, 0.95, 2, avg_ret(502:end), VaR_ewma95);
-[ XT2,m_2 ] = testHypNor(0.05, 0.99, 2, avg_ret(502:end), VaR_ewma99);
+[ XT1,m_1,Z_1,N_1 ] = testHypNor(0.05, 0.95, 2, avg_ret(502:end), VaR_ewma95);
+[ XT2,m_2,Z_1,N_2 ] = testHypNor(0.05, 0.99, 2, avg_ret(502:end), VaR_ewma99);
 % Historical Simulation
-[ XT3,m_3 ] = testHypNor(0.05, 0.95, 2, avg_ret(501:end), VaR95_his);
-[ XT4,m_4 ] = testHypNor(0.05, 0.99, 2, avg_ret(501:end), VaR99_his);
+[ XT3,m_3,Z_3,N_3 ] = testHypNor(0.05, 0.95, 2, avg_ret(501:end), VaR95_his);
+[ XT4,m_4,Z_4,N_4 ] = testHypNor(0.05, 0.99, 2, avg_ret(501:end), VaR99_his);
 % Historical Simulation STD
-[ XT5,m_5 ] = testHypNor(0.05, 0.95, 2, avg_retStd(501:end), VaR95_hisStd);
-[ XT6,m_6 ] = testHypNor(0.05, 0.99, 2, avg_retStd(501:end), VaR99_hisStd);
+[ XT5,m_5,Z_5,N_5 ] = testHypNor(0.05, 0.95, 2, avg_retStd(501:end), VaR95_hisStd);
+[ XT6,m_6,Z_6,N_6 ] = testHypNor(0.05, 0.99, 2, avg_retStd(501:end), VaR99_hisStd);
 output.struct.hTest=[m_1 m_2 m_3 m_4 m_5 m_6]-[XT1 XT2 XT3 XT4 XT5 XT6];
 
 % 1f
@@ -231,9 +231,9 @@ delta_C16m = normcdf(C16m_d1);
 delta_C20a = normcdf(C20a_d1);
 delta_P16m = normcdf(P16m_d1)-1;
 
-vega_C16m = SPX(1)*sqrt(((expiry_C16m-dates(1))/365))*((1/sqrt(2*pi))*exp(-C16m_d1^2/2));
-vega_C20a = SPX(1)*sqrt(((expiry_C20a-dates(1))/365))*((1/sqrt(2*pi))*exp(-C20a_d1^2/2));
-vega_P16m = SPX(1)*sqrt(((expiry_P16m-dates(1))/365))*((1/sqrt(2*pi))*exp(-P16m_d1^2/2));
+vega_C16m = SPX(1)*sqrt(((expiry_C16m-dates(1))/365))*normpdf(C16m_d1);
+vega_C20a = SPX(1)*sqrt(((expiry_C20a-dates(1))/365))*normpdf(C20a_d1);
+vega_P16m = SPX(1)*sqrt(((expiry_P16m-dates(1))/365))*normpdf(P16m_d1);
 
 rho_C16m=K_C16m*((expiry_C16m-dates(1))/365)*(exp(-RF3m(1)*((expiry_C16m-dates(1))/365)))*normcdf(C16m_d2); 
 rho_C20a=K_C20a*((expiry_C20a-dates(1))/365)*(exp(-RF3m(1)*((expiry_C20a-dates(1))/365)))*normcdf(C20a_d2); 
@@ -253,24 +253,46 @@ Price_P16m_v2 = Price_C16m + K_P16m*exp(-RF3m(1)*((expiry_C16m-dates(1))/365))-S
 
 h=[10^4; 2*10^4 ; 10^4];
 
-SPX_voll  = sqrt(sum((SPX-mean(SPX)).^2)/(length(SPX)-1));
-VIX_voll  = sqrt(sum((VIX-mean(VIX)).^2)/(length(VIX)-1));
-RF3m_voll = sqrt(sum((RF3m-mean(RF3m)).^2)/(length(RF3m)-1));
+SPX_dif = SPX(1:end-1)-SPX(2:end);
+VIX_dif = VIX(1:end-1)-VIX(2:end);
+RF3m_dif = RF3m(1:end-1)-RF3m(2:end);
 
-C= [SPX_voll^2 SPX_voll*VIX_voll*corr(SPX,VIX) SPX_voll*RF3m_voll*corr(SPX,RF3m)];
-C =[C ; C(1,2) VIX_voll^2 VIX_voll*RF3m_voll*corr(VIX,RF3m)];
-C =[C ; C(1,3) C(2,3) RF3m_voll^2];
+A=[SPX_dif,VIX_dif,RF3m_dif];
+C=cov(A);
 
 V = [Price_C16m Price_C20a Price_P16m]*h; % Portfolio Value
 
-sigma_sq = (1/V^2)*h'*G'*C*G*h; % volla på årsbasis?
+sigma_sq = (1/V^2)*h'*G*C*G'*h;
 
-VaR = V * norminv(0.99)*sqrt(sigma_sq)*sqrt(1/365);
+VaR = V*norminv(0.99)*sqrt(sigma_sq);
+
+VaR_procent=VaR/V;
+
+% 3b
+
+asset_contr = (norminv(0.99)*sqrt(1)*G*C*G'*h)/sqrt((V^2*sigma_sq));
+fact_contr = (norminv(0.99)*C*G'*h)/sqrt((V^2*sigma_sq));
+
+% FRÅGA PONTUS! 
+
+% 4
+% x0=[0.94];
+% A=[1];
+% b=[1];
+% Aeq=[0];
+% beq=[0];
+% lb=0;
+% ub=1;
+% 
+% fun=@(x0)-sum((-log(EWMA_serie(x0, avg_ret)')-avg_ret(2:end).^2./EWMA_serie(x0, avg_ret)'));
+% [lambda, fval] = fmincon(fun,x0,A,b,Aeq,beq,lb,ub)
+
+fun = @(beta, zeta, y)-sum(ln((1+zeta*y/beta)/beta)^((-1/zeta)-1)); 
 
 
 
 
 
 
- 
+
 
