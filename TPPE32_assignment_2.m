@@ -68,6 +68,7 @@ sigma_ret = sqrt(w'*C*w);
 
 VaR_95 = sigma_ret * norminv(0.95);
 VaR_975 = sigma_ret * norminv(0.975);
+VaR_99 = sigma_ret * norminv(0.99);
 
 % 1b
 % EWMA
@@ -128,24 +129,30 @@ title('His. Sim. VaR 99%');
 datetick('x','YYYY-mm')
 
 % ES
-E_fall95 = mean(sorted_VpLoss(1:floor((length(Vp_R)*0.05))));
-E_fall99 = mean(sorted_VpLoss(1:floor((length(Vp_R)*0.01))));
+E_fall95 = mean(sorted_VpLoss(1:floor((length(Vp_R)*0.05))))/Vp_C;
+E_fall99 = mean(sorted_VpLoss(1:floor((length(Vp_R)*0.01))))/Vp_C;
 
 % 1d
-sigma_t = sqrt(sum((avg_ret(1:end)-mean(avg_ret(1:end))).^2)/(length(avg_ret)-1));
-for i=1:length(EWMA)
-    avg_retStd=avg_ret(2:end)*(sigma_t/sqrt(EWMA(i)));
+%sigma_t = sqrt(sum((avg_ret(1:end)-mean(avg_ret(1:end))).^2)/(length(avg_ret)-1));
+avg_retStd=[];
+for j=1:length(EWMA)-500;
+    for i=1:500 %length(EWMA)
+        avg_retStd(i)=avg_ret(i+j-1)*(sqrt(EWMA(j+500))/sqrt(EWMA(i+j-1)));
+    end
+    VaR95_hisStd(j)= -quantile(avg_retStd(i:end)',0.05);
+    VaR99_hisStd(j)= -quantile(avg_retStd(i:end),0.01);
 end
-figure();
-hist(avg_retStd,100);
+% avg_retStd=avg_retStd';
+% figure();
+% hist(avg_retStd,100);
 
-% VaR
-VaR95_hisStd = zeros(length(avg_retStd)-500,1);
-VaR99_hisStd = VaR95_hisStd;
-for i=1:length(VaR95_hisStd)
-    VaR95_hisStd(i) = -quantile(avg_retStd(i:i+499),0.05);
-    VaR99_hisStd(i) = -quantile(avg_retStd(i:i+499),0.01);
-end
+% % VaR
+% VaR95_hisStd = zeros(length(avg_retStd)-500,1);
+% VaR99_hisStd = VaR95_hisStd;
+% for i=1:length(VaR95_hisStd)
+%     VaR95_hisStd(i) = -quantile(avg_retStd(i:i+499),0.05);
+%     VaR99_hisStd(i) = -quantile(avg_retStd(i:i+499),0.01);
+% end
 
 figure()
 subplot(2,1,1)
@@ -188,7 +195,11 @@ scatter(dates(502:end), avg_ret(501:end),'*')
 hold on
 plot(dates(502:end), -VaR99_his)
 
-
+figure()
+scatter(dates(503:end), avg_ret(502:end),'*')
+hold on
+plot(dates(503:end), -VaR_ewma95)
+datetick('x','YYYY-mm')
 %% Task 2 in EXCEL
 % clear
 % close all
@@ -280,31 +291,45 @@ VaR_procent=VaR/V;
 
 % 3b
 
-asset_contr = (norminv(0.99)*sqrt(1)*G*C*G'*h)/sqrt((V^2*sigma_sq));
+asset_contr = (norminv(0.99)*G*C*G'*h)/sqrt((V^2*sigma_sq));
 fact_contr = (norminv(0.99)*C*G'*h)/sqrt((V^2*sigma_sq));
 
-sum(asset_contr)/V;
+% h'*asset_contr
+% h'*G*fact_contr
 
-% FRÅGA PONTUS! 
-
-% 4
-% x0=[0.94];
-% A=[1];
-% b=[1];
-% Aeq=[0];
+%% 4
+x0=[0.1 0.1]; % BETA & XI |  beta 10% av biggest loss xi 0.1
+%-0.10*min(avg_ret)*Vp_C*10^6
+% A=[0 0];
+% b=[0];
+% Aeq=[0 0];
 % beq=[0];
 % lb=0;
 % ub=1;
 % 
+
 % fun=@(x0)-sum((-log(EWMA_serie(x0, avg_ret)')-avg_ret(2:end).^2./EWMA_serie(x0, avg_ret)'));
 % [lambda, fval] = fmincon(fun,x0,A,b,Aeq,beq,lb,ub)
 
-fun = @(beta, zeta, y)-sum(ln((1+zeta*y/beta)/beta)^((-1/zeta)-1)); 
+sorted = sort(avg_ret); 
+u =sorted(floor(length(avg_ret)*0.05)+1); % Less than this value --> In Left Tail
+y = sorted(1:floor(length(avg_ret)*0.05))-u;
 
+fun = @(x0)-sum(log((1/x0(1))*((1+x0(2)*y/x0(1))).^((-1/x0(2))-1))); 
+[x,fval] = fmincon(fun,x0); %,A,b,Aeq,beq,lb,ub);
 
+tail_pdf =(1/x(1))*((1+x(2)*sort(y,'descend')/x(1))).^((-1/x(2))-1);
+figure()
+plot(tail_pdf(1:end-1));
+%xt={'-15%' ; '-10%' ; '-5%' ; '0%'};
+%set(gca,'xtick',[-0.15 -0.10 -0.05 0]);
+%set(gca,'xticklabel',xt);
 
-
-
-
-
-
+criteria = 1+x(2)*y/x(1);
+error = length(find(criteria<0));
+if error > 0
+   'Forbidden Solution!' 
+end
+n=length(avg_ret);
+nu=length(y);
+EVT_VaR_99_weekly = abs(u) + (x(1)/x(2))*((n/nu*0.01)^(-x(2))-1);
